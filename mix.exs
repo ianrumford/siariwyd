@@ -1,32 +1,43 @@
 defmodule Siariwyd.Mixfile do
   use Mix.Project
 
+  @version "0.1.0"
+
   def project do
     [app: :siariwyd,
-     version: "0.1.0",
+     version: @version,
      elixir: "~> 1.3",
+     description: description,
+     package: package,
+     source_url: "https://github.com/ianrumford/siariwyd",
+     homepage_url: "https://github.com/ianrumford/siariwyd",
+     docs: [extras: ["./README.md"]],
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      deps: deps()]
   end
 
-  # Configuration for the OTP application
-  #
-  # Type "mix help compile.app" for more information
   def application do
     [applications: [:logger]]
   end
 
-  # Dependencies can be Hex packages:
-  #
-  #   {:mydep, "~> 0.3.0"}
-  #
-  # Or git/path repositories:
-  #
-  #   {:mydep, git: "https://github.com/elixir-lang/mydep.git", tag: "0.1.0"}
-  #
-  # Type "mix help deps" for more examples and options
   defp deps do
-    []
+    [
+      {:ex_doc, ">= 0.13.0", only: :dev},
+    ]
   end
+
+  defp package do
+    [maintainers: ["Ian Rumford"],
+     files: ["lib", "mix.exs", "README*", "LICENSE*"],
+     licenses: ["MIT"],
+     links: %{github: "https://github.com/ianrumford/siariwyd"}]
+  end
+
+  defp description do
+  """
+  Siariwyd: Sharing and Reusing Functions' Implementations that must be compiled together.
+  """
+  end
+
 end
