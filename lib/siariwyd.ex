@@ -207,12 +207,19 @@ defmodule Siariwyd do
   A `mapper/1` is applied **after** any `filter/1`.
   """
 
+  use Siariwyd.Attributes
+  import Siariwyd.Accessors
+  import Siariwyd.Normalise
+
   @typedoc "The names of the functions to register or include."
   @type name :: atom
   @type names :: name | [name]
 
+  @typedoc "Something that can be unquoted"
+  @type unquotable :: Macro.t
+
   @typedoc "Maybe quoted module"
-  @type maybe_quoted_module :: module | Macro.t
+  @type maybe_quoted_module :: module | unquotable
 
   @type kind :: :def | :defp | :defmacro | :defmacrop
 
@@ -229,10 +236,10 @@ defmodule Siariwyd do
   }
 
   @typedoc "Maybe quoted filter fun"
-  @type maybe_quoted_filter_fun :: Macro.t | ({name, function_definition} -> as_boolean(term))
+  @type maybe_quoted_filter_fun ::unquotable | ({name, function_definition} -> as_boolean(term))
 
   @typedoc "Maybe quoted mapper fun"
-  @type maybe_quoted_mapper_fun :: Macro.t | ({name, function_definition} -> Macro.t)
+  @type maybe_quoted_mapper_fun :: unquotable | ({name, function_definition} -> unquotable)
 
   @typedoc "The opts for the register action"
   @type register_opt ::
@@ -257,198 +264,6 @@ defmodule Siariwyd do
   {:module, module}
 
   @type use_options :: [use_option]
-
-  # the name of the dictionary in the caller module
-  @siariwyd_registrations :siariwyd_registrations
-  @siariwyd_module_init_flag :siariwyd_module_init_flag
-
-  @siariwyd_pipelines  %{
-
-    registrations: [
-      :initialize,
-      :register_functions,
-      :finalize],
-
-    inclusions: [:include_functions]
-
-  }
-
-  @siariwyd_pipelines_run [:registrations, :inclusions]
-
-  @siariwyd_opts_keys_valid [:register, :filter, :mapper, :include, :module]
-  @siariwyd_opts_keys_normalise [:register, :filter, :mapper, :include, :module]
-
-  @siariwyd_opts_keys_pipeline [:register, :include]
-  @siariwyd_opts_defaults [include: nil]
-
-  @doc false
-  def module_init_flag_get(module) do
-    module |> Module.get_attribute(@siariwyd_module_init_flag)
-  end
-
-  @doc false
-  def module_init_flag_put(module, init_flag) do
-    module |> Module.put_attribute(@siariwyd_module_init_flag, init_flag)
-  end
-
-  @doc false
-  def compiled_module_registrations_get(module) do
-    module.__info__(:attributes)
-    |> Keyword.get(@siariwyd_registrations)
-    |> List.first
-  end
-
-  @doc false
-  def module_registrations_get(module) do
-    module |> Module.get_attribute(@siariwyd_registrations)
-  end
-
-  @doc false
-  def module_registrations_fetch!(module) do
-
-    case module |> module_registrations_get do
-
-      x when is_map(x) -> x
-
-      _ ->
-
-        # must exists
-        raise ArgumentError, message: "Siariwyd:on_definition registrations #{@siariwyd_registrations} does not exist"
-
-    end
-
-  end
-
-  @doc false
-  def module_registrations_put(module, registrations) do
-    true = module |> Module.put_attribute(@siariwyd_registrations, registrations)
-
-    module
-  end
-
-  @doc false
-  def module_registrations_register(module) do
-
-    nil = module |> Module.register_attribute(@siariwyd_registrations,
-      accumulate: false, persist: true)
-    module
-  end
-
-  @doc false
-  def module_registrations_merge(module, registrations) do
-
-    module
-    |> module_registrations_get
-    |> Map.merge(registrations)
-    |> fn registrations ->
-      module |> module_registrations_put(registrations)
-    end.()
-
-    module
-  end
-
-  defp spec_registrations_get(spec, default \\ []) do
-    spec |> Map.get(:registrations, default)
-  end
-
-  defp spec_registrations_put(spec, value) do
-    spec |> Map.put(:registrations, value)
-  end
-
-  defp spec_inclusions_get(spec, default \\ []) do
-    spec |> Map.get(:inclusions, default)
-  end
-
-  defp spec_inclusions_put(spec, value) do
-    spec |> Map.put(:inclusions, value)
-  end
-
-  defp spec_pipelines_get(spec, default) do
-    spec |> Map.get(:pipelines, default)
-  end
-
-  defp spec_asts_get(spec, default \\ %{}) do
-    spec |> Map.get(:asts, default)
-  end
-
-  defp spec_asts_put(spec, value) do
-    spec |> Map.put(:asts, value)
-  end
-
-  defp spec_asts_verb_get(spec, verb, default \\ nil) do
-    spec |> spec_asts_get |> Map.get(verb, default)
-  end
-
-  defp spec_asts_verb_put(spec, verb, ast) do
-    asts = spec |> spec_asts_get |> Map.put(verb, ast)
-    spec |> spec_asts_put(asts)
-  end
-
-  defp spec_module_put(spec, value) do
-    spec |> Map.put(:module, value)
-  end
-
-  defp spec_filter_get(spec, default) do
-    spec |> Map.get(:filter, default)
-  end
-
-  defp spec_filter_put(spec, value) do
-    spec |> Map.put(:filter, value)
-  end
-
-  defp spec_mapper_get(spec, default) do
-    spec |> Map.get(:mapper, default)
-  end
-
-  defp spec_mapper_put(spec, value) do
-    spec |> Map.put(:mapper, value)
-  end
-
-  defp spec_opts_put(spec, value) do
-    spec |> Map.put(:opts, value)
-  end
-
-  defp normalise_value_fun(value)
-
-  defp normalise_value_fun(nil) do
-    nil
-  end
-
-  defp normalise_value_fun({:fn, _, _} = ast) do
-    {fun, _} = ast |> Code.eval_quoted([], __ENV__)
-    fun
-  end
-
-  defp normalise_value_fun(value) when is_function(value) do
-    value
-  end
-
-  defp normalise_value_module(value)
-
-  defp normalise_value_module(nil) do
-    nil
-  end
-
-  defp normalise_value_module({:__aliases__, _, _} = ast) do
-    {module, _} = ast |> Code.eval_quoted([], __ENV__)
-    module
-  end
-
-  defp normalise_value_module(value) when is_atom(value) do
-    value
-  end
-
-  defp normalise_function_names(names) do
-    names
-    |> List.wrap
-    |> Enum.reject(&is_nil/1)
-  end
-
-  defp validate_function_names!(names) do
-    names = names |> normalise_function_names
-    true = names |> Enum.all?(fn name -> is_atom(name) end)
-    names
-  end
 
   @doc ~S"""
   This convenenience function completely rebuilds the function's implementation (an ast).
@@ -500,9 +315,6 @@ defmodule Siariwyd do
           end)
 
       end
-
-    # paranoia
-    :ok = function_ast |> Macro.validate
 
     definition |> Map.put(:ast, function_ast)
 
@@ -556,6 +368,19 @@ defmodule Siariwyd do
   def spec_run_action(verb, spec)
 
   @doc false
+  def spec_run_action(:bootstrap = verb, %{caller_module: module} = spec) do
+
+    ast = quote do
+      # using persist stops the compiler warning if the attribute is
+      # not used again i.e by a subsequent call to use
+     unquote(module) |> Siariwyd.Accessors.module_init_flag_register(persist: true)
+    end
+
+    spec |> spec_asts_verb_put(verb, ast)
+
+  end
+
+  @doc false
   def spec_run_action(:initialize = verb, %{caller_module: module} = spec) do
 
     initial_registrations_ast = %{}
@@ -566,21 +391,19 @@ defmodule Siariwyd do
       quote do
 
       # has module already been initialized?
-      case unquote(module) |> Siariwyd.module_init_flag_get do
+      case unquote(module) |> Siariwyd.Accessors.module_init_flag_get do
 
         flag when flag in [nil, false] ->
 
-          # @siariwyd_registrations :siariwyd_registrations
-
-          case unquote(module) |> Siariwyd.module_registrations_get do
+          case unquote(module) |> Siariwyd.Accessors.module_registrations_get do
 
             x when x in [nil, false]  ->
 
               # create the persistent registrations attribute
               unquote(module)
-              |> Siariwyd.module_registrations_register
+              |> Siariwyd.Accessors.module_registrations_register
               # pre-create empty registrations
-              |> Siariwyd.module_registrations_put(unquote(initial_registrations_ast))
+              |> Siariwyd.Accessors.module_registrations_put(unquote(initial_registrations_ast))
 
               # register the on_definition callback
               @on_definition {Siariwyd, :on_definition}
@@ -606,7 +429,7 @@ defmodule Siariwyd do
   def spec_run_action(:finalize = verb, %{caller_module: module} = spec) do
 
     ast = quote do
-      unquote(module) |> Siariwyd.module_init_flag_put(true)
+      unquote(module) |> Siariwyd.Accessors.module_init_flag_put(true)
     end
 
     spec |> spec_asts_verb_put(verb, ast)
@@ -634,7 +457,7 @@ defmodule Siariwyd do
             |> Enum.into(%{})
 
             # merge with existing registrations for *same* module
-            unquote(module) |> Siariwyd.module_registrations_merge(registrations)
+            unquote(module) |> Siariwyd.Accessors.module_registrations_merge(registrations)
 
           end
       end
@@ -716,7 +539,7 @@ defmodule Siariwyd do
 
         filter = opts
         |> Keyword.fetch!(:filter)
-        |> normalise_value_fun
+        |> maybe_ast_realise_fun
 
         spec |> spec_filter_put(filter)
 
@@ -736,7 +559,7 @@ defmodule Siariwyd do
 
         mapper = opts
         |> Keyword.fetch!(:mapper)
-        |> normalise_value_fun
+        |> maybe_ast_realise_fun
 
         spec |> spec_mapper_put(mapper)
 
@@ -756,7 +579,7 @@ defmodule Siariwyd do
 
         module = opts
         |> Keyword.fetch!(:module)
-        |> normalise_value_module
+        |> maybe_ast_realise_module
 
         spec |> spec_module_put(module)
 
@@ -866,9 +689,7 @@ defmodule Siariwyd do
     # extract the asts in pipelines' verbs order
     pipelines
     |> Enum.flat_map(fn {_pipeline, verbs} ->
-
       verbs |> Enum.map(fn verb -> spec |> spec_asts_verb_get(verb) end)
-
     end)
     |> List.flatten
     |> Enum.reject(&is_nil/1)
@@ -901,7 +722,7 @@ defmodule Siariwyd do
     }
     |> spec_run_pipelines
 
-  end
+   end
 
 end
 

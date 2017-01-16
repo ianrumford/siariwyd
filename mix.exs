@@ -1,17 +1,17 @@
 defmodule Siariwyd.Mixfile do
   use Mix.Project
 
-  @version "0.1.0"
+  @version "0.2.0"
 
   def project do
     [app: :siariwyd,
      version: @version,
-     elixir: "~> 1.3",
-     description: description,
-     package: package,
+     elixir: "~> 1.4",
+     description: description(),
+     package: package(),
      source_url: "https://github.com/ianrumford/siariwyd",
      homepage_url: "https://github.com/ianrumford/siariwyd",
-     docs: [extras: ["./README.md"]],
+     docs: [extras: ["./README.md", "./CHANGELOG.md"]],
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      deps: deps()]
@@ -23,13 +23,13 @@ defmodule Siariwyd.Mixfile do
 
   defp deps do
     [
-      {:ex_doc, ">= 0.13.0", only: :dev},
+      {:ex_doc, "~> 0.14.5", only: :dev},
     ]
   end
 
   defp package do
     [maintainers: ["Ian Rumford"],
-     files: ["lib", "mix.exs", "README*", "LICENSE*"],
+     files: ["lib", "mix.exs", "README*", "LICENSE*", "CHANGELOG*"],
      licenses: ["MIT"],
      links: %{github: "https://github.com/ianrumford/siariwyd"}]
   end

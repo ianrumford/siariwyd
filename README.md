@@ -30,7 +30,7 @@ some background.
 Add **siariwyd** to your list of dependencies in <span class="underline">mix.exs</span>:
 
     def deps do
-      [{:siariwyd, "~> 0.1.0"}]
+      [{:siariwyd, "~> 0.2.0"}]
     end
 
 ## Examples
